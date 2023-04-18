@@ -1,0 +1,11 @@
+[
+  {
+    "id": 2,
+    "title": "Producto 2",
+    "description": "Este es un producto prueba 2",
+    "price": 1500,
+    "thumbnail": "https://yahoo.com",
+    "code": "222333",
+    "stock": 20
+  }
+]
