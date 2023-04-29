@@ -1,126 +1,136 @@
 const fs = require("fs");
 
 class ProductManager {
-    constructor(path) {
-        this.path = path;
-        this.products = [];
-        this.currentId = 0;
-    }
+  constructor(fileName) {
+    this.path = `./${fileName}.json`;
+    this.products = [...productList];
+}
 
-    async loadData() {
-        try {
-            const data = await fs.promises.readFile(this.path, "utf-8");
-            const parsedData = JSON.parse(data);
-            this.products = parsedData;
-        } catch (error) {
-            console.log("Error loading data!");
-        }
-    }
-    
-    async saveData() {
-        try {
-            await fs.promises.writeFile(this.path, JSON.stringify(this.products, null, 2),"utf-8");
-        } catch (error) {
-            console.log("Error saving data!");
-        }
-    }
-    
-    async addProduct(product) {
-        if (this.products.some((item) => item.code === product.code)) {
-            return "Product already exists";
-    }
-        if (
+async getData() {
+    fs.existsSync(this.path)
+    ? (this.products = JSON.parse(
+        await fs.promises.readFile(this.path, "utf-8")
+        ))
+    : await fs.promises.writeFile(this.path, JSON.stringify(this.products));
+
+    return this.products;
+}
+
+async addProduct(product) {
+    await this.getData();
+    if (
         !product.title ||
         !product.description ||
         !product.price ||
         !product.thumbnail ||
         !product.code ||
         !product.stock
-        ) {
-        return "Product is missing required properties";
-        }
-        product = { id: ++this.currentId, ...product };
-        this.products.push(product);
-        await this.saveData();
-        return "Product added successfully";
+    ) {
+    return "The content of the fields is wrong.";
+}
+
+if (this.products.some((item) => item.code === product.code)) {
+    return "Product already exists.";
+}
+
+const maxId =
+    this.products.length > 0
+        ? Math.max(...this.products.map((p) => p.id))
+        : 0;
+    this.id = maxId + 1;
+
+    let newProduct = { id: this.id, ...product };
+    this.products.push(newProduct);
+
+    await fs.promises.writeFile(
+        this.path,
+        JSON.stringify(this.products, null, 2)
+    );
+
+    return "Product added successfully.";
+}
+
+async getProducts() {
+    await this.getData();
+    return this.products;
+}
+
+async getProductById(id) {
+    await this.getData();
+    let prodFound = this.products.find((p) => p.id === id);
+    if (!prodFound) {
+        return "Product not found.";
+    }
+    return prodFound;
+}
+
+async updateProduct(id, updatedProduct) {
+    await this.getData();
+    let prodIndex = this.products.findIndex((p) => p.id === id);
+
+    if (prodIndex === -1) {
+        return "Product not found.";
+    }
+    this.products[prodIndex] = {
+        ...this.products[prodIndex],
+        ...updatedProduct,
+};
+
+await fs.promises.writeFile(
+    this.path,
+    JSON.stringify(this.products, null, 2)
+    );
+
+    return "Product updated successfully.";
+}
+
+async deleteProduct(id) {
+    await this.getData();
+    const prodIndex = this.products.findIndex((p) => p.id === id);
+
+    if (prodIndex === -1) {
+        return "Product not found.";
     }
 
-    async updateProduct(id, product) {
-        await this.loadData();
-        const productIndex = this.products.findIndex((product) => product.id === id);
-        if (productIndex === -1) {
-            return "Product not found";
-        }
-        this.products[productIndex] = { ...this.products[productIndex], ...product, id: this.products[productIndex].id };
-        await this.saveData();
-        return "Product updated successfully";
-    }
+    this.products.splice(prodIndex, 1);
+    await fs.promises.writeFile(
+        this.path,
+        JSON.stringify(this.products, null, 2)
+    );
 
-    async deleteProduct(id) {
-        await this.loadData();
-        const productIndex = this.products.findIndex((product) => product.id === id);
-        if (productIndex === -1) {
-            return "Product not found";
-        }
-        this.products.splice(productIndex, 1);
-        await this.saveData();
-        return "Product deleted successfully";
-    }
-    
-
-    async getProducts() {
-        await this.loadData();
-        return this.products.length > 0 ? this.products : "No products";
-    }
-
-    async getProductById(id) {
-        await this.loadData();
-        return this.products.find((product) => product.id === id) ?? "Not Found";
-    }
+    return "Product deleted successfully.";
+}
 
 }
 
-tests();
+const productList = [
+    {
+        "id": 1,
+        "title": "Producto 1",
+        "description": "Este es un producto prueba 1",
+        "price": 500,
+        "thumbnail": "https://yahoo.com",
+        "code": "111222",
+        "stock": 10
+    },
+    {
+        "id": 2,
+        "title": "Producto 2",
+        "description": "Este es un producto prueba 2",
+        "price": 1000,
+        "thumbnail": "https://yahoo.com",
+        "code": "222333",
+        "stock": 20
+    },
+    {
+        "id": 3,
+        "title": "Producto 2",
+        "description": "Este es un producto prueba 3",
+        "price": 1500,
+        "thumbnail": "https://yahoo.com",
+        "code": "333444",
+        "stock": 30
+    },
+];  
 
-async function tests() {
-
-    const myProductManager = new ProductManager("products.json");
-
-    const product1 = {
-        title: "Producto 1",
-        description: "Este es un producto prueba 1",
-        price: 1000,
-        thumbnail: "https://google.com",
-        code: "111222",
-        stock: 10,
-    };
-
-    console.log(await myProductManager.addProduct(product1));
-    console.log(await myProductManager.getProducts());
-    // console.log(await myProductManager.getProductById(1));
-
-    const productOneUpdates = {
-        title: "Producto 1 actualizado",
-        description: "Descripción actualizada",
-    };
-
-    console.log(await myProductManager.updateProduct(1, productOneUpdates));
-    console.log(await myProductManager.getProducts());
-
-
-    const product2 = {
-        title: "Producto 2",
-        description: "Este es un producto prueba 2",
-        price: 1500,
-        thumbnail: "https://yahoo.com",
-        code: "222333",
-        stock: 20,
-    };
-    
-    console.log(await myProductManager.addProduct(product2));
-    console.log(await myProductManager.getProducts());
-
-    console.log(await myProductManager.deleteProduct(2));
-    console.log(await myProductManager.getProducts());
-    
-}
+module.exports = ProductManager;
