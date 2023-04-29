@@ -1,0 +1,23 @@
+{
+  "name": "desafiosbackend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "ProductManager.js",
+  "scripts": {
+    "start": "nodemon src/app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kersiancoder/desafiosbackend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kersiancoder/desafiosbackend/issues"
+  },
+  "homepage": "https://github.com/kersiancoder/desafiosbackend#readme",
+  "dependencies": {
+    "nodemon": "^2.0.22"
+  }
+}

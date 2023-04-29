@@ -1,11 +1,11 @@
 [
   {
-    "id": 2,
-    "title": "Producto 2",
-    "description": "Este es un producto prueba 2",
-    "price": 1500,
-    "thumbnail": "https://yahoo.com",
-    "code": "222333",
-    "stock": 20
+    "id": 1,
+    "title": "Producto 1 actualizado",
+    "description": "Descripción actualizada",
+    "price": 1000,
+    "thumbnail": "https://google.com",
+    "code": "111222",
+    "stock": 10
   }
 ]
