@@ -11,7 +11,7 @@ async getData() {
     ? (this.products = JSON.parse(
         await fs.promises.readFile(this.path, "utf-8")
         ))
-    : await fs.promises.writeFile(this.path, JSON.stringify(this.products));
+    : await fs.promises.writeFile(this.path, JSON.stringify(this.products, null, 2),"utf-8");
 
     return this.products;
 }
