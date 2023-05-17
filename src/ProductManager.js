@@ -1,80 +1,144 @@
-import fs from "fs"
+const fs = require("fs");
 
-export class ProductManager {
-    constructor(path) {
-        this.path = path;
-        if (fs.existsSync(path)) {
-            const productsString = fs.readFileSync(this.path, "utf-8")
-            const productsFile = JSON.parse(productsString)
-            this.products = productsFile
-        } else {
-            fs.writeFileSync(path, "[]")
-            this.products = []
-        }
+class ProductManager {
+  constructor(fileName) {
+    this.path = `./${fileName}.json`;
+    this.products = [...productList];
+  }
+
+  async getData() {
+    fs.existsSync(this.path)
+      ? (this.products = JSON.parse(
+          await fs.promises.readFile(this.path, "utf-8")
+        ))
+      : await fs.promises.writeFile(this.path, JSON.stringify(this.products));
+
+    return this.products;
+  }
+
+  async addProduct(product) {
+    await this.getData();
+
+    if (
+      !product.title ||
+      !product.description ||
+      !product.price ||
+      !product.thumbnail ||
+      !product.code ||
+      !product.stock ||
+      !product.category
+    ) {
+      return "The content of the fields is wrong.";
     }
 
-    //method to add products to our variable products
-    async addProduct(obj) {
-        const data = await this.getProducts()
-        if (obj) {
-            if (data.find((product) => product.code === obj.code)) {
-                return ("The product already exists");
-            } else {
-                data.push(
-                    obj
-                );
-                const productsString = JSON.stringify(data, null, 2)
-                await fs.promises.writeFile(this.path, productsString)
-            }
-        }
+    if (this.products.some((item) => item.code === product.code)) {
+      return "Product already exists.";
     }
 
-    //method to know products within our variable products
-    async getProducts() {
-        const productsString = await fs.promises.readFile(this.path, "utf-8")
-        const productsFile = JSON.parse(productsString)
-        return productsFile
+    const maxId =
+      this.products.length > 0
+        ? Math.max(...this.products.map((p) => p.id))
+        : 0;
+    this.id = maxId + 1;
+
+    let newProduct = { id: this.id, ...product, status: true };
+    this.products.push(newProduct);
+
+    await fs.promises.writeFile(
+      this.path,
+      JSON.stringify(this.products, null, 2)
+    );
+
+    return "Product added successfully.";
+  }
+
+  async getProducts() {
+    await this.getData();
+    return this.products;
+  }
+
+  async getProductById(id) {
+    await this.getData();
+    let prodFound = this.products.find((p) => p.id === id);
+    if (!prodFound) {
+      return "Product not found.";
+    }
+    return prodFound;
+  }
+
+  async updateProduct(id, updatedProduct) {
+    await this.getData();
+    let prodIndex = this.products.findIndex((p) => p.id === id);
+
+    if (prodIndex === -1) {
+      return "Product not found.";
     }
 
-    //method to know a product within our variable products
-    async getProductById(id) {
-        const productsString = await fs.promises.readFile(this.path, "utf-8")
-        const productsFile = JSON.parse(productsString)
-        const product = productsFile.find((product) => product.id === id);
-        if (product) {
-            return product;
-        } else {
-            return ("No existe el producto");
-        }
+    this.products[prodIndex] = {
+      ...this.products[prodIndex],
+      ...updatedProduct,
+    };
+
+    await fs.promises.writeFile(
+      this.path,
+      JSON.stringify(this.products, null, 2)
+    );
+
+    return "Product updated successfully.";
+  }
+
+  async deleteProduct(id) {
+    await this.getData();
+    const prodIndex = this.products.findIndex((p) => p.id === id);
+
+    if (prodIndex === -1) {
+      return "Product not found.";
     }
 
-    //method for update product
-    async updateProduct(id, object) {
-        const productsString = await fs.promises.readFile(this.path, "utf-8")
-        const productsFile = JSON.parse(productsString)
-        const product = productsFile.find((product) => product.id == id);
-        if (product) {
-            const updateProduct = { ...product, ...object }
-            const index = productsFile.indexOf(product)
-            productsFile.splice(index, 1, updateProduct)
-            const productsString = JSON.stringify(productsFile, null, 2)
-            await fs.promises.writeFile(this.path, productsString)
-            return product
-        }
-    }
+    this.products.splice(prodIndex, 1);
+    await fs.promises.writeFile(
+      this.path,
+      JSON.stringify(this.products, null, 2)
+    );
 
-    //method for delete product
-    async deleteProduct(id) {
-        const productsString = await fs.promises.readFile(this.path, "utf-8")
-        const productsFile = JSON.parse(productsString)
-        const product = productsFile.find((product) => product.id == id);
-        if (product) {
-            const index = productsFile.indexOf(product)
-            productsFile.splice(index, 1)
-            const productsString = JSON.stringify(productsFile, null, 2)
-            await fs.promises.writeFile(this.path, productsString)
-            return product
-        }
-    }
+    return "Product deleted successfully.";
+  }
 }
 
+  const productList = [
+    {
+      id: 1,
+      title: "Fender Stratocaster El Diablo 1956",
+      description: "Guitar",
+      price: 8500,
+      thumbnail: "https://guitar.com/guitar.jpg",
+      code: "a101",
+      stock: 10,
+      category: "Electric Guitar",
+      status: true
+    },
+    {
+      id: 2,
+      title: "Fender Bass 1967",
+      description: "Guitar Bass",
+      price: 6300,
+      thumbnail: "https://guitar.com/bass.jpg",
+      code: "a102",
+      stock: 5,
+      category: "Electric Bass Guitar",
+      status: true
+    },
+    {
+      id: 3,
+      title: "Gibson Dove 2002",
+      description: "Guitar Acoustic",
+      price: 5350,
+      thumbnail: "https://guitar.com/guitaracoustic.jpg",
+      code: "a103",
+      stock: 25,
+      category: "Acoustic Guitar",
+      status: true
+    },
+  ];  
+
+  module.exports = ProductManager;

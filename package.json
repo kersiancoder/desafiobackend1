@@ -1,17 +1,24 @@
 {
-  "name": "entregable-clase-06",
+  "name": "desafio04",
   "version": "1.0.0",
   "description": "",
-  "main": "productManager.js",
+  "main": "products.js",
+  "engines": {
+    "node": "16.x"
+  },
   "scripts": {
-    "start": "nodemon ./src/server.js"
+    "dev": "nodemon src/app.js",
+    "start": "node src/app.js"
   },
   "keywords": [],
-  "type": "module",
   "author": "",
   "license": "ISC",
   "dependencies": {
     "express": "^4.18.2",
+    "express-handlebars": "^7.0.7",
+    "socket.io": "^4.6.1"
+  },
+  "devDependencies": {
     "nodemon": "^2.0.22"
   }
 }
