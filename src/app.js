@@ -1,73 +1,71 @@
-const express = require("express");
-const { Server: HttpServer } = require("http");
-const { Server: SocketServer } = require("socket.io");
+import express from 'express';
+import { productsRouter } from './routes/products.router.js';
+import { cartsRouter } from './routes/carts.router.js';
+import viewsRouter from './routes/views.router.js';
+import { __dirname, __filename, connectMongo } from './utils.js';
+import handlebars from 'express-handlebars';
+import http from 'http';
+import { Server as SocketServer } from 'socket.io';
+import ProductService from './services/products.service.js';
 
-const productRoutes = require("./routers/products.routes");
-const cartRoutes = require("./routers/carts.routes");
-const hbsRoutes = require("./routers/handlebars.routes");
-const realTimeProdRoutes = require("./routers/realtimeprods.routes");
+await connectMongo();
 
-const ProductManager = require("./ProductManager");
-const data = new ProductManager("productsDB");
-
-const handlerbars = require("express-handlebars");
-const path = require("path");
-
-const PORT = 8080;
+const productService = new ProductService;
+const port = 8080;
 const app = express();
-const httpServer = new HttpServer(app);
+const httpServer = http.createServer(app);
 const io = new SocketServer(httpServer);
 
-const serverConnected = httpServer.listen(PORT, () =>
-  console.log(`📢 Server listening on port: ${PORT}`)
-);
+const serverConnected = httpServer.listen(port, ()=> console.log(`Server listening on port: ${port}`));
+serverConnected.on('error', error => console.log(`Server error: ${error}`))
 
-serverConnected.on("error", (error) => console.log(`Server error: ${error}`));
 
-//middlewares
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use("/public", express.static(__dirname + "/public"));
-
-//usando el engine handlerbars para plantilla
-app.engine("handlebars", handlerbars.engine());
-app.set("view engine", "handlebars");
-app.set("views", path.join(__dirname, "views"));
-
-// Routes
-app.use("/api", productRoutes);
-app.use("/api", cartRoutes);
-app.use("/", hbsRoutes);
-app.use("/realtimeproducts", realTimeProdRoutes);
-
-io.on("connection", (socket) => {
-  console.log(`New Client Connection with ID: ${socket.id}`);
-
-  socket.on("new-product", async (newProd) => {
-    try {
-      await data.addProduct({ ...newProd });
-      // Actualizando lista despues de agregar producto nuevo
-      const productsList = await data.getProducts();
-
-      io.emit("products", productsList);
-    } catch (error) {
-      console.log(error);
-    }
-  });
-  socket.on("delete-product", async (delProd) => {
-    try {
-      let id = parseInt(delProd)
-      await data.deleteProduct(id);
-      // Actualizando lista despues de agregar producto nuevo
-      const productsList = await data.getProducts();
-
-      io.emit("products", productsList);
-    } catch (error) {
-      console.log(error);
-    }
-  });
+io.on('connection', (socket)=> {
+    console.log(`New Client Connection with ID: ${socket.id}`);
+    //BACK RECIBE
+    socket.on('msg_from_client_to_server', async (newProduct)=>{
+        try{
+            await productService.createProduct(newProduct);
+            const productList = await productService.getAllProducts();
+            //BACK EMITE
+            io.emit("updatedProducts", {productList})
+        }
+        catch (error) {
+            console.log(error);
+        }
+    })
+    socket.on('deleteProduct', async (id) => {
+        try {
+            await productService.deleteProduct(id);
+            socket.emit('productDeleted', { message: 'Producto eliminado exitosamente' });
+            const productList = await productService.getAllProducts();
+            io.emit('updatedProducts', { productList });
+        } catch (error) {
+            console.error('Error al eliminar el producto:', error);
+            socket.emit('productDeleteError', { error: 'Ocurrió un error al eliminar el producto' });
+        }
+    });
 });
 
-app.get("*", (req, res) =>
-  res.status(404).send("<h3> ⛔ We cannot access the requested route</h3>")
-);
+//Handlebars
+app.engine('handlebars', handlebars.engine());
+app.set('views', __dirname+'/views');
+app.set('view engine', 'handlebars');
+
+//middlewares
+app.use(express.static(__dirname+'/public'));
+app.use(express.static('./public'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+//routes
+app.use('/api/products', productsRouter);
+app.use('/api/carts', cartsRouter);
+app.use('/', viewsRouter); 
+app.use('/realTimeProducts', viewsRouter); 
+app.get('*',(req, res)=>{
+    return res.status(404).json({
+        status: 'error',
+        msg: 'Route not found'
+    });
+});
