@@ -1,97 +1,44 @@
-import express from 'express';
-import CartService from '../services/carts.service.js';
-
-export const cartsRouter = express.Router();
-
-const cartService = new CartService();
-
+import { Router } from "express";
+import CartService from "../services/carts.services.js";
+const cartsRouter = Router();
+const Service = new CartService();
 cartsRouter.post("/", async (req, res) => {
-  try {
-    const cart = await cartService.createCart();
-    return res.status(201).json({
-      status: 'success',
-      msg: 'Cart created',
-      payload: cart
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(400).json({
-      status: 'error',
-      msg: error.message,
-    });
-  }
+    const response = await Service.addCart();
+    return res.status(response.code).json(response.result);
 });
-
 cartsRouter.get("/:cid", async (req, res) => {
-  try {
-    const idCart = req.params.cid;
-    const cart = await cartService.getCartById(idCart);
-    return res.status(200).json({
-      status: 'success',
-      msg: 'Cart found',
-      payload: cart
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(400).json({
-      status: 'error',
-      msg: error.message,
-    });
-  }
+    const cartID = req.params.cid;
+    const response = await Service.getCartProducts(cartID);
+    return res.status(response.code).json(response.result);
 });
-
+cartsRouter.put("/:cid", async (req, res) => {
+    const cartID = req.params.cid;
+    const products = req.body;
+    const response = await Service.updateProductsList(cartID, products);
+    return res.status(response.code).json(response.result);
+});
 cartsRouter.delete("/:cid", async (req, res) => {
-  try {
-    const idCart = req.params.cid;
-    const cart = await cartService.deleteCartById(idCart);
-    return res.status(200).json({
-      status: 'success',
-      msg: 'Cart deleted',
-      payload: cart
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(400).json({
-      status: 'error',
-      msg: error.message,
-    });
-  }
+    const cartID = req.params.cid;
+    const response = await Service.clearCart(cartID);
+    return res.status(response.code).json(response.result);
 });
-
-cartsRouter.post("/:cid/products/:pid", async (req, res) => {
-  try {
-    const idCart = req.params.cid;
-    const idProd = req.params.pid;
-    const cart = await cartService.addProductToCart(idCart, idProd);
-    return res.status(200).json({
-      status: 'success',
-      msg: 'Product added to cart',
-      payload: cart
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(400).json({
-      status: 'error',
-      msg: error.message,
-    });
-  }
+cartsRouter.put("/:cid/product/:pid", async (req, res) => {
+    const cartID = req.params.cid;
+    const productID = req.params.pid;
+    const quantity = req.body.quantity;
+    const response = await Service.updateProductQuantity(cartID, productID, quantity);
+    return res.status(response.code).json(response.result);
 });
-
-cartsRouter.delete("/:cid/products/:pid", async (req, res) => {
-  try {
-    const idCart = req.params.cid;
-    const idProd = req.params.pid;
-    const cart = await cartService.removeProductFromCart(idCart, idProd);
-    return res.status(200).json({
-      status: 'success',
-      msg: 'Product removed from cart',
-      payload: cart
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(400).json({
-      status: 'error',
-      msg: error.message,
-    });
-  }
+cartsRouter.post("/:cid/product/:pid", async (req, res) => {
+    const cartID = req.params.cid;
+    const productID = req.params.pid;
+    const response = await Service.addProductToCart(cartID, productID);
+    return res.status(response.code).json(response.result);
 });
+cartsRouter.delete("/:cid/product/:pid", async (req, res) => {
+    const cartID = req.params.cid;
+    const productID = req.params.pid;
+    const response = await Service.deleteProductFromCart(cartID, productID);
+    return res.status(response.code).json(response.result);
+});
+export default cartsRouter;

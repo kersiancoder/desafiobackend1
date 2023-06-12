@@ -1,71 +1,84 @@
-import fs from 'fs';
-import ProductManager from './productManager.js';
-const productManager = new ProductManager("./src/data/products.json");
-
-class CartManager {
+import fs from "fs";
+import ProductManager from "./ProductManager.js";
+const productManager = new ProductManager("productos.json");
+export default class CartManager {
     constructor(path) {
         this.path = path;
-    };
-
-    async createCart() {
+        this.carts = [];
+        this.currentId = 0;
+    }
+    async loadData() {
         try {
-            let carts = []
-            if (fs.existsSync(this.path)){
-                const cartStr = await fs.promises.readFile(this.path, 'utf-8');
-                carts = JSON.parse(cartStr);
+            const data = await fs.promises.readFile(this.path, "utf-8");
+            const parsedData = JSON.parse(data);
+            this.carts = parsedData.carts;
+            this.currentId = parsedData.lastId;
+        }
+        catch (error) {
+            console.log("Error loading data!");
+            console.log("Creating new data file...");
+            try {
+                await fs.promises.writeFile(this.path, JSON.stringify({ lastId: 0, carts: [] }, null, 2), "utf-8");
+                await this.loadData();
+                console.log("Data file created");
             }
-            const id = carts.length>0 ? carts[carts.length-1].id + 1 : 1;
-            const newCart = {id, products:[]}
-            carts.push(newCart);
-            await fs.promises.writeFile(this.path, JSON.stringify(carts, null, 2));
-            return newCart;
-        } catch (err) {
-            throw new Error(err+' Error getting carts');
+            catch (error) {
+                console.log("Error creating data file!");
+            }
         }
-    };
-
-    async getCartById(id) {
-      try {
-        if (fs.existsSync(this.path)){
-            const cartStr = await fs.promises.readFile(this.path, 'utf-8');
-            let carts = JSON.parse(cartStr);
-            let cartFound = carts.find((c)=>c.id === id);
-            return !cartFound ? `Cart with id ${id} not found`: cartFound.products;
-        } else {
-            return 'Cart does not exist';
+    }
+    async saveData() {
+        try {
+            await fs.promises.writeFile(this.path, JSON.stringify({ lastId: this.currentId, carts: this.carts }, null, 2), "utf-8");
         }
-      } catch (err) {
-        throw new Error(err);
-      }
-    };
-
-    async addProductToCart(cartId, prodId, qty){
-      try{
-        let quantity= qty||1;
-        const cartStr = await fs.promises.readFile(this.path, 'utf-8');
-        let carts = JSON.parse(cartStr);
-        const cartIndex = carts.findIndex((elem)=> elem.id = cartId)
+        catch (error) {
+            console.log("Error saving data!");
+        }
+    }
+    async addCart() {
+        const newId = ++this.currentId;
+        this.carts.push({ _id: newId.toString(), productos: [] });
+        await this.saveData();
+        return {
+            code: 201,
+            result: { status: "success", message: "Cart created successfully", payload: this.carts[this.carts.length - 1] },
+        };
+    }
+    getCartProducts(id) {
+        const cart = this.carts.find((item) => item._id === id);
+        if (cart) {
+            return { code: 200, result: { status: "success", payload: cart.productos } };
+        }
+        else {
+            return { code: 404, result: { status: "error", message: "Cart not found" } };
+        }
+    }
+    async addProductToCart(cartID, productID) {
+        // Check if product exists
+        if (!productManager.productExists(productID)) {
+            return { code: 404, result: { status: "error", message: "Product not found" } };
+        }
+        // Check if cart exists
+        const cartIndex = this.carts.findIndex((cart) => cart._id === cartID);
         if (cartIndex === -1) {
-          return `Cart with id ${cartId} not found`;
+            return { code: 404, result: { status: "error", message: "Cart not found" } };
         }
-        let prodInCart = carts[cartIndex].products.findIndex((elem)=>elem.id === prodId)
-        if(prodInCart===-1){
-          const prod = await productManager.getProductById(prodId)
-          if (!prod) {
-            return `Product with id ${prodId} not found`;
-          }     
-          const newProd = { id: prodId, quantity };
-          carts[cartIndex].products.push(newProd);
-        } else {
-          carts[cartIndex].products[prodInCart].quantity += quantity;
+        // Check if product is already in cart, add ++ to quantity
+        const productIndex = this.carts[cartIndex].productos.findIndex((product) => product.idProduct === productID);
+        if (productIndex !== -1) {
+            this.carts[cartIndex].productos[productIndex].quantity++;
+            await this.saveData();
+            return {
+                code: 202,
+                result: { status: "success", message: "Product updated quantity", payload: this.carts[cartIndex] },
+            };
         }
-
-        await fs.promises.writeFile(this.path, JSON.stringify(carts, null, 2));
-        return carts[cartIndex].products.length>0 ? carts[cartIndex].products[prodInCart] : 'The cart is empty';
-      } catch (err) {
-        throw new Error(err);
-      }
-    };
-};
-
-export default CartManager;
+        // Else, add product to cart
+        this.carts[cartIndex].productos.push({ idProduct: productID, quantity: 1 });
+        await this.saveData();
+        return {
+            code: 202,
+            result: { status: "success", message: "Product added to cart", payload: this.carts[cartIndex] },
+        };
+    }
+}
