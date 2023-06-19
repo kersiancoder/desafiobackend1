@@ -1,29 +1,13 @@
 import { ProductModel } from "../models/products.models.js";
-import mongoose from "mongoose";
 export default class ProductService {
     async addProduct(product) {
         try {
-            // Check if product already exists
-            if (await ProductModel.findOne({ code: product.code })) {
-                return { code: 400, result: { status: "error", message: "Product already exists" } };
-            }
-            // Check if product has all required properties
-            if (!product.title ||
-                !product.description ||
-                !product.price ||
-                !product.code ||
-                !product.category ||
-                !product.stock) {
-                return { code: 400, result: { status: "error", message: "Product is missing required properties" } };
-            }
             // If no thumbnail, set default value to empty array
-            if (!product.thumbnail) {
+            if (!product.thumbnail)
                 product.thumbnail = [];
-            }
             // if no status, set default value to true
-            if (!product.status) {
+            if (!product.status)
                 product.status = true;
-            }
             // Add product
             await ProductModel.create(product);
             return { code: 201, result: { status: "success", message: "Product added successfully", payload: product } };
@@ -32,18 +16,10 @@ export default class ProductService {
             return { code: 400, result: { status: "error", message: "Error adding product" } };
         }
     }
-    async getProductById(id) {
+    async getProductById(pid) {
         try {
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                return { code: 404, result: { status: "error", message: "Product not found" } };
-            }
-            const product = await ProductModel.findById(id);
-            if (product) {
-                return { code: 200, result: { status: "success", payload: product } };
-            }
-            else {
-                return { code: 404, result: { status: "error", message: "Product not found" } };
-            }
+            const product = await ProductModel.findById(pid);
+            return { code: 200, result: { status: "success", payload: product } };
         }
         catch (error) {
             return { code: 404, result: { status: "error", message: "Couldn't get product" } };
@@ -51,23 +27,10 @@ export default class ProductService {
     }
     async getProducts(limit = 10, query = null, sort = null, pag = 1) {
         try {
-            query = query ? { category: query } : {};
-            // If limit not a number, return error.
-            if (isNaN(limit))
-                return { code: 400, result: { status: "error", message: "Invalid limit parameter" } };
-            limit = limit || 10;
-            // If page not a number, return error.
-            if (isNaN(pag))
-                return { code: 400, result: { status: "error", message: "Invalid page parameter" } };
-            pag = pag || 1;
             const options = { limit, page: pag, lean: true, leanWithId: false };
-            // if sort is not null, check if it's a valid value and then set sort option.
-            if (sort) {
-                const validSort = sort === "asc" || sort === "desc";
-                if (!validSort)
-                    return { code: 400, result: { status: "error", message: "Invalid sort parameter" } };
+            // if sort exists, add it to options
+            if (sort)
                 options.sort = { price: sort };
-            }
             const products = await ProductModel.paginate(query, options);
             // if products array is empty, return error
             if (products.docs.length === 0) {
@@ -77,7 +40,7 @@ export default class ProductService {
             const { docs, totalPages, prevPage, nextPage, page, hasNextPage, hasPrevPage } = products;
             // Setting Next and Prev page urls
             const queryStr = Object.keys(query).length === 0 ? "" : `&query=${query}`;
-            const sortStr = sort !== null ? `&sort=${sort}` : "";
+            const sortStr = sort ? `&sort=${sort}` : "";
             const prevPageUrl = hasPrevPage && `/products?page=${prevPage}&limit=${limit}${queryStr}${sortStr}`;
             const nextPageUrl = hasNextPage && `/products?page=${nextPage}&limit=${limit}${queryStr}${sortStr}`;
             // Setting result object and returning it
@@ -88,24 +51,15 @@ export default class ProductService {
             return { code: 400, result: { status: "error", message: "Error getting products" } };
         }
     }
-    async updateProduct(id, productAttributes) {
+    async updateProduct(pid, productAttributes) {
         try {
-            // Check if product exists
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                return { code: 404, result: { status: "error", message: "Product not found" } };
-            }
-            const product = await ProductModel.findById(id);
-            if (!product) {
-                return { code: 404, result: { status: "error", message: "Product not found" } };
-            }
-            // Else, update product and secure id property is not modified
-            await ProductModel.updateOne({ _id: id }, productAttributes);
+            await ProductModel.updateOne({ _id: pid }, productAttributes);
             return {
                 code: 200,
                 result: {
                     status: "success",
                     message: "Product updated successfully",
-                    payload: await ProductModel.findOne({ _id: id }),
+                    payload: await ProductModel.findOne({ _id: pid }),
                 },
             };
         }
@@ -113,18 +67,10 @@ export default class ProductService {
             return { code: 400, result: { status: "error", message: "Error updating product" } };
         }
     }
-    async deleteProduct(id) {
+    async deleteProduct(pid) {
         try {
-            // Check if product exists
-            if (!mongoose.Types.ObjectId.isValid(id)) {
-                return { code: 404, result: { status: "error", message: "Product not found" } };
-            }
-            const product = await ProductModel.find({ _id: id });
-            if (!product) {
-                return { code: 404, result: { status: "error", message: "Product not found" } };
-            }
-            // Else, delete product
-            await ProductModel.deleteOne({ _id: id });
+            const product = await ProductModel.find({ _id: pid });
+            await ProductModel.deleteOne({ _id: pid });
             return {
                 code: 200,
                 result: { status: "success", message: "Product deleted successfully", payload: product },
@@ -134,9 +80,9 @@ export default class ProductService {
             return { code: 400, result: { status: "error", message: "Error deleting product" } };
         }
     }
-    async productExists(id) {
+    async productExists(pid) {
         try {
-            return await ProductModel.exists({ _id: id });
+            return await ProductModel.exists({ _id: pid });
         }
         catch {
             return false;
